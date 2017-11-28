@@ -22,7 +22,7 @@ func TestPool_Pool(t *testing.T) {
     Destroyer: func(p *Pool, connection interface{}) (error) {
       return nil
     },
-  }, Options{Min: 1, Max: 5})
+  }, Options{Min: 1, Max: 5, Idle: 60})
 
   resource, _ := p.Get()
 
@@ -76,7 +76,7 @@ func TestPool_PoolSize(t *testing.T) {
     Destroyer: func(p *Pool, connection interface{}) (error) {
       return nil
     },
-  }, Options{Min: 1, Max: 5})
+  }, Options{Min: 1, Max: 5, Idle: 60})
 
   for i := 0; i < 100; i++ {
     p.Get() // increase pool +1

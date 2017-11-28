@@ -111,7 +111,7 @@ Get entity
  */
 func (p *Pool) Get() (interface{}, error) {
   if p.destroyed == true {
-    err := errors.New("The pool have been destroyed!")
+    err := errors.New("the pool have been destroyed")
     return nil, err
   }
 
