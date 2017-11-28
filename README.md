@@ -90,4 +90,4 @@ func main() {
 
 ## License
 
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Faxetroy%2Fnid.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Faxetroy%2Fnid?ref=badge_large)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Faxetroy%2Fgeneric-pool.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Faxetroy%2Fgeneric-pool?ref=badge_large)

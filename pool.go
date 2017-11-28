@@ -1,7 +1,7 @@
 package pool
 
 import (
-  "github.com/kataras/iris/core/errors"
+  "errors"
   "time"
   "sort"
   "fmt"
