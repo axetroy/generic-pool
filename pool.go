@@ -7,7 +7,7 @@ import (
   "fmt"
 )
 
-type CreatorFunc func(p *Pool) (interface{}, error)
+type CreatorFunc func(p *Pool) (resource interface{}, err error)
 type DestroyerFunc func(p *Pool, resource interface{}) (err error)
 
 type Pool struct {
