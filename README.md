@@ -36,7 +36,7 @@ func (c *Connection) Close() (err error) {
 
 func main() {
 
-  pool.New(pool.Config{
+  p := pool.New(pool.Config{
     Creator: func(p *pool.Pool) (interface{}, error) {
       // create connection
       connection := Connection{
@@ -58,6 +58,21 @@ func main() {
       return connection.Close()
     },
   }, pool.Options{Min: 5, Max: 50, Idle: 60})
+
+  if resource, err := p.Get(); err != nil {
+    panic(err)
+  } else {
+
+    connection := resource.(Connection)
+
+    defer func() {
+      //connection.Close()
+      // You don't need to close by manual, resource pool will do this
+    }()
+
+    connection.send([]byte("Hello world"))
+  }
+
 }
 
 ```
