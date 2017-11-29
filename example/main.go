@@ -52,18 +52,22 @@ func main() {
     },
   }, pool.Options{Min: 5, Max: 50, Idle: 60})
 
-  if resource, err := p.Get(); err != nil {
+  // Get the resource
+  resource, err := p.Get()
+
+  if err != nil {
     panic(err)
-  } else {
-
-    faceConnection := resource.(faceConnection)
-
-    defer func() {
-      // faceConnection.Close()
-      // You don't need to close by manual, resource pool will do this
-    }()
-
-    faceConnection.send([]byte("Hello world"))
   }
+
+  // parse the resource to connection
+  faceConnection := resource.(faceConnection)
+
+  defer func() {
+    // faceConnection.Close()
+    // You don't need to close by manual, resource pool will do this
+  }()
+
+  // send data
+  faceConnection.send([]byte("Hello world"))
 
 }
