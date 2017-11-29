@@ -3,7 +3,7 @@ package pool
 import (
   "testing"
   "time"
-  "github.com/kataras/iris/core/errors"
+  "errors"
   "fmt"
 )
 
