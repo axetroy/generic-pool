@@ -1,6 +1,7 @@
 ## Generic pool manager
 
 [![Build Status](https://travis-ci.org/axetroy/generic-pool.svg?branch=master)](https://travis-ci.org/axetroy/generic-pool)
+[![Coverage Status](https://coveralls.io/repos/github/axetroy/generic-pool/badge.svg?branch=master)](https://coveralls.io/github/axetroy/generic-pool?branch=master)
 ![License](https://img.shields.io/badge/license-Apache-green.svg)
 
 Manage the resource pool, like connection...
@@ -18,44 +19,51 @@ import (
   "github.com/axetroy/generic-pool"
 )
 
-type Connection struct {
-  online bool
+type faceConnection struct {
 }
 
-func (c *Connection) Connect() (err error) {
+func (c *faceConnection) Connect() (err error) {
   return
 }
 
-func (c *Connection) send(data []byte) {
+func (c *faceConnection) send(data []byte) {
 
 }
 
-func (c *Connection) Close() (err error) {
+func (c *faceConnection) OnClose(func()) (err error) {
+  return
+}
+
+func (c *faceConnection) Close() (err error) {
   return
 }
 
 func main() {
 
-  p := pool.New(pool.Config{
-    Creator: func(p *pool.Pool) (interface{}, error) {
-      // create connection
-      connection := Connection{
-        online: true,
-      }
+  p, _ := pool.New(pool.Config{
+    Creator: func(p *pool.Pool, id int64) (interface{}, error) {
+      // create an face connection
+      faceConnection := faceConnection{}
 
       // connect
-      if err := connection.Connect(); err != nil {
+      if err := faceConnection.Connect(); err != nil {
         return nil, err
       }
 
-      // return connection
-      return connection, nil
+      // when connection close by remote, we should remove it from pool
+      faceConnection.OnClose(func() {
+        // release the resource
+        p.Release(id)
+      })
+
+      // return this
+      return faceConnection, nil
     },
     Destroyer: func(p *pool.Pool, resource interface{}) (err error) {
       // parse the connection
-      connection := resource.(Connection)
+      faceConnection := resource.(faceConnection)
 
-      return connection.Close()
+      return faceConnection.Close()
     },
   }, pool.Options{Min: 5, Max: 50, Idle: 60})
 
@@ -63,18 +71,17 @@ func main() {
     panic(err)
   } else {
 
-    connection := resource.(Connection)
+    faceConnection := resource.(faceConnection)
 
     defer func() {
-      //connection.Close()
+      // faceConnection.Close()
       // You don't need to close by manual, resource pool will do this
     }()
 
-    connection.send([]byte("Hello world"))
+    faceConnection.send([]byte("Hello world"))
   }
 
 }
-
 ```
 
 ## Contributing
