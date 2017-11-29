@@ -4,7 +4,6 @@ import (
   "testing"
   "time"
   "errors"
-  "fmt"
 )
 
 type Engine struct {
@@ -12,9 +11,10 @@ type Engine struct {
 }
 
 func TestPool_Pool(t *testing.T) {
+  // t.Skip()
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return &Engine{
         Id: "hello id",
       }, nil
@@ -65,9 +65,10 @@ func TestPool_Pool(t *testing.T) {
 
 // The pool size is define, no matter how many time you get, it must be
 func TestPool_PoolSize(t *testing.T) {
+  // t.Skip()
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return &Engine{
         Id: "hello id",
       }, nil
@@ -80,7 +81,6 @@ func TestPool_PoolSize(t *testing.T) {
 
   for i := 0; i < 100; i++ {
     p.Get() // increase pool +1
-    //fmt.Println(i, p.pool)
     if i <= 4 {
       if len(p.Pool) != i+1 {
         t.Errorf("The pool size should be %v", i+1)
@@ -94,22 +94,13 @@ func TestPool_PoolSize(t *testing.T) {
     }
     time.Sleep(time.Millisecond * 10)
   }
-
-  // first resource always is latest resource
-  r0 := p.Pool[0]
-  r1 := p.Pool[4]
-
-  if r0.LastUseAt.UnixNano() < r1.LastUseAt.UnixNano() {
-    t.Errorf("The fist resource is not the latest!")
-    return
-  }
 }
 
 // if resource is not use, it should be release
 func TestPool_PoolIdle(t *testing.T) {
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return &Engine{
         Id: "hello id",
       }, nil
@@ -129,33 +120,35 @@ func TestPool_PoolIdle(t *testing.T) {
     t.Errorf("The pool length should be 5 not %v", len(p.Pool))
   }
 
-  ticker := time.NewTicker(time.Millisecond * 100)
+  ticker := time.NewTicker(time.Second)
   go func() {
     for _ = range ticker.C {
       p.checkIdle()
     }
   }()
 
-  time.Sleep(time.Second * 5)
-
-  fmt.Println(len(p.Pool))
+  time.Sleep(time.Second * 6)
 
   if len(p.Pool) != 1 {
     t.Errorf("The pool after all should be reduce to 1 not %v", len(p.Pool))
     return
   }
 
-  if p.Pool[0].Idle != true {
-    t.Errorf("The idle pool should mark with idel")
-    return
+  for _, resource := range p.Pool {
+    if resource.Idle != true {
+      t.Errorf("The idle pool should mark with idel")
+      return
+    }
   }
+
 }
 
 // if can not create resource
 func TestPool_PoolCreatorThrowError(t *testing.T) {
+  // t.Skip()
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return nil, errors.New("can not connect to db")
     },
     // destroy connection
@@ -179,9 +172,10 @@ func TestPool_PoolCreatorThrowError(t *testing.T) {
 
 // if can not destroy resource
 func TestPool_PoolDestroyerThrowError(t *testing.T) {
+  // t.Skip()
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -209,9 +203,10 @@ func TestPool_PoolDestroyerThrowError(t *testing.T) {
 
 // destroy without any exist resource
 func TestPool_PoolDestroyWithoutResource(t *testing.T) {
+  // t.Skip()
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -237,9 +232,10 @@ func TestPool_PoolDestroyWithoutResource(t *testing.T) {
 
 // destroy without any exist resource
 func TestPool_PoolIdleWhenDestroyerThrow(t *testing.T) {
+  // t.Skip()
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -266,22 +262,13 @@ func TestPool_PoolIdleWhenDestroyerThrow(t *testing.T) {
     t.Errorf("The pool length should be 1 not %v", len(p.Pool))
     return
   }
-
-  fmt.Println(p.Pool)
-
-  // every resource's property Destroyed should be false
-  for _, resource := range p.Pool {
-    if resource.Destroyed == true {
-      t.Errorf("Every one resource property .Destroyed should be false")
-    }
-  }
-
 }
 
 func TestPool_PoolDestroyLikeExpect(t *testing.T) {
+  // t.Skip()
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -309,9 +296,10 @@ func TestPool_PoolDestroyLikeExpect(t *testing.T) {
 }
 
 func TestPool_PoolDefaultOptions(t *testing.T) {
+  // t.Skip()
   p1, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -327,7 +315,7 @@ func TestPool_PoolDefaultOptions(t *testing.T) {
 
   p2, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -343,7 +331,7 @@ func TestPool_PoolDefaultOptions(t *testing.T) {
 
   p3, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -359,7 +347,7 @@ func TestPool_PoolDefaultOptions(t *testing.T) {
 
   _, err := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -376,6 +364,7 @@ func TestPool_PoolDefaultOptions(t *testing.T) {
 }
 
 func TestPool_PoolInvalidConfig(t *testing.T) {
+  // t.Skip()
   _, err := New(Config{
     // create connection
     Creator: nil,
@@ -392,7 +381,7 @@ func TestPool_PoolInvalidConfig(t *testing.T) {
 
   _, err = New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection
@@ -407,9 +396,10 @@ func TestPool_PoolInvalidConfig(t *testing.T) {
 }
 
 func TestPool_PoolReleaseResource(t *testing.T) {
+  // t.Skip()
   p, _ := New(Config{
     // create connection
-    Creator: func(p *Pool, id int64) (interface{}, error) {
+    Creator: func(p *Pool, id Id) (interface{}, error) {
       return "This is a connection", nil
     },
     // destroy connection

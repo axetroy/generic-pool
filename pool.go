@@ -3,27 +3,27 @@ package pool
 import (
   "errors"
   "time"
-  "sort"
 )
 
-type CreatorFunc func(p *Pool, id int64) (resource interface{}, err error)
+type Id int64
+
+type CreatorFunc func(p *Pool, id Id) (resource interface{}, err error)
 type DestroyerFunc func(p *Pool, resource interface{}) (err error)
 
 type Pool struct {
   Config    Config
   Options   Options
-  Pool      []*Resource
+  Pool      map[Id]*Resource
   Destroyed bool
-  index     int64
+  index     Id
 }
 
 type Resource struct {
   Idle      bool
-  Destroyed bool
   LastUseAt time.Time
   UseCount  int
   Resource  interface{}
-  Id        int64
+  Id        Id
 }
 
 type Config struct {
@@ -78,6 +78,7 @@ func New(c Config, o Options) (p *Pool, err error) {
   p = &Pool{
     Config:  c,
     Options: o,
+    Pool:    map[Id]*Resource{},
   }
   ticker := time.NewTicker(time.Second)
   go func() {
@@ -88,40 +89,29 @@ func New(c Config, o Options) (p *Pool, err error) {
   return
 }
 
+/**
+Check the pool idle resource
+ */
 func (p *Pool) checkIdle() {
   lengthOfPool := len(p.Pool)
   if lengthOfPool > 0 && lengthOfPool > p.Options.Min {
-    for i, resource := range p.Pool {
+    for id, resource := range p.Pool {
       idleAt := resource.LastUseAt.Unix() + p.Options.Idle
       now := time.Now().Unix()
       if now > idleAt {
         // over the min resource number, other should be destroy
-        if i+1 > p.Options.Min {
-          resource.Destroyed = true
+        if len(p.Pool) > p.Options.Min {
+          if err := p.Config.Destroyer(p, resource.Resource); err == nil {
+            if _, ok := p.Pool[id]; ok {
+              delete(p.Pool, id)
+            }
+          }
         } else {
           // mark as idle resource
           resource.Idle = true
         }
       }
     }
-
-    ret := make([]*Resource, 0)
-
-    for _, resource := range p.Pool {
-      if resource.Destroyed == false {
-        ret = append(ret, resource)
-      } else {
-        if err := p.Config.Destroyer(p, resource.Resource); err != nil {
-          // destroy fail
-          resource.Destroyed = false
-          ret = append(ret, resource)
-        }
-      }
-    }
-
-    sort.Sort(ByTime(ret))
-
-    p.Pool = ret
   }
 }
 
@@ -134,50 +124,59 @@ func (p *Pool) Get() (interface{}, error) {
     return nil, err
   }
 
+  // the pool not fulled, it should create new one
   if len(p.Pool) < p.Options.Max {
     id := p.index + 1
     if resource, err := p.Config.Creator(p, id); err != nil {
       return nil, err
     } else {
       p.index = id
-      p.Pool = append(p.Pool, &Resource{
+      p.Pool[id] = &Resource{
         LastUseAt: time.Now(),
         UseCount:  0,
         Resource:  resource,
         Idle:      false,
         Id:        p.index,
-      })
+      }
       return resource, nil
     }
   } else {
-    // if overload, them return the current resource
-    sort.Sort(ByTime(p.Pool))
-    p.Pool[0].LastUseAt = time.Now()
-    p.Pool[0].Idle = false
-    p.Pool[0].UseCount = p.Pool[0].UseCount + 1
-    return *p.Pool[0], nil
+    // if overload, then get the latest resource
+    var (
+      lastUseAt       *time.Time
+      lastUseResource *Resource
+    )
+
+    // find the resource which not use at latest
+    for _, resource := range p.Pool {
+      if lastUseAt == nil {
+        lastUseAt = &resource.LastUseAt
+        lastUseResource = resource
+      }
+      if resource.LastUseAt.UnixNano() < (*lastUseAt).UnixNano() {
+        lastUseAt = &resource.LastUseAt
+        lastUseResource = resource
+        break
+      }
+    }
+    lastUseResource.LastUseAt = time.Now()
+    lastUseResource.Idle = false
+    lastUseResource.UseCount = lastUseResource.UseCount + 1
+
+    return lastUseResource, nil
   }
 }
 
 /**
 Release a resource by id
  */
-func (p *Pool) Release(id int64) (err error) {
-  newPool := make([]*Resource, 0)
-
-  defer func() {
-    for _, resource := range p.Pool {
-      if resource.Destroyed == false {
-        newPool = append(newPool, resource)
-      }
-    }
-    p.Pool = newPool
-  }()
-
-  for _, resource := range p.Pool {
-    if resource.Id == id {
+func (p *Pool) Release(id Id) (err error) {
+  for resourceId, resource := range p.Pool {
+    if resourceId == id {
       if err = p.Config.Destroyer(p, resource.Resource); err == nil {
-        resource.Destroyed = true
+        if _, ok := p.Pool[id]; ok {
+          delete(p.Pool, id)
+        }
       }
     }
   }
@@ -188,26 +187,11 @@ func (p *Pool) Release(id int64) (err error) {
 Release the resource
  */
 func (p *Pool) Destroy() (err error) {
-  newPool := make([]*Resource, 0)
-
-  defer func() {
-    for _, resource := range p.Pool {
-      if resource.Destroyed == false {
-        newPool = append(newPool, resource)
-      }
-    }
-    p.Pool = newPool
-  }()
-
-  for _, resource := range p.Pool {
-    // destroy the resource
-    if err = p.Config.Destroyer(p, resource.Resource); err != nil {
-      resource.Destroyed = false
+  for id := range p.Pool {
+    if err = p.Release(id); err != nil {
       return
     }
-    resource.Destroyed = true
   }
-
   p.Destroyed = true
   return
 }

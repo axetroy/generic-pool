@@ -26,7 +26,7 @@ func (c *faceConnection) Close() (err error) {
 func main() {
 
   p, _ := pool.New(pool.Config{
-    Creator: func(p *pool.Pool, id int64) (interface{}, error) {
+    Creator: func(p *pool.Pool, id pool.Id) (interface{}, error) {
       // create an face connection
       faceConnection := faceConnection{}
 
