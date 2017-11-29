@@ -16,14 +16,18 @@ func (c *Connection) send(data []byte) {
 
 }
 
+func (c *Connection) OnClose(func()) (err error) {
+  return
+}
+
 func (c *Connection) Close() (err error) {
   return
 }
 
 func main() {
 
-  p := pool.New(pool.Config{
-    Creator: func(p *pool.Pool) (interface{}, error) {
+  p, _ := pool.New(pool.Config{
+    Creator: func(p *pool.Pool, id int64) (interface{}, error) {
       // create connection
       connection := Connection{
         online: true,
@@ -33,6 +37,12 @@ func main() {
       if err := connection.Connect(); err != nil {
         return nil, err
       }
+
+      // when connection close by remote, we should remove it from pool
+      connection.OnClose(func() {
+        // release the resource
+        p.Release(id)
+      })
 
       // return connection
       return connection, nil
