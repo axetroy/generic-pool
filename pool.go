@@ -79,7 +79,7 @@ func New(c Config, o Options) (p *Pool, err error) {
     Config:  c,
     Options: o,
   }
-  ticker := time.NewTicker(time.Millisecond * 100)
+  ticker := time.NewTicker(time.Second)
   go func() {
     for _ = range ticker.C {
       p.checkIdle()

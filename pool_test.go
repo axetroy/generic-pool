@@ -253,14 +253,14 @@ func TestPool_PoolIdleWhenDestroyerThrow(t *testing.T) {
     p.Get()
   }
 
-  ticker := time.NewTicker(time.Millisecond * 100)
+  ticker := time.NewTicker(time.Second)
   go func() {
     for _ = range ticker.C {
       p.checkIdle()
     }
   }()
 
-  time.Sleep(time.Second * 4)
+  time.Sleep(time.Second * 6)
 
   if len(p.Pool) != 5 {
     t.Errorf("The pool length should be 1 not %v", len(p.Pool))
