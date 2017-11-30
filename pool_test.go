@@ -29,7 +29,7 @@ func TestPool_Pool(t *testing.T) {
 
   d := resource.(*Engine)
 
-  if len(p.Pool) != 1 {
+  if p.Pool.Count() != 1 {
     t.Errorf("pool length not equal 1")
     return
   }
@@ -43,7 +43,7 @@ func TestPool_Pool(t *testing.T) {
     t.Errorf("Destroy pool should not throw an error")
     return
   } else {
-    if len(p.Pool) != 0 {
+    if p.Pool.Count() != 0 {
       t.Errorf("The pool after destroy should be 0")
       return
     }
@@ -82,12 +82,12 @@ func TestPool_PoolSize(t *testing.T) {
   for i := 0; i < 100; i++ {
     p.Get() // increase pool +1
     if i <= 4 {
-      if len(p.Pool) != i+1 {
+      if p.Pool.Count() != i+1 {
         t.Errorf("The pool size should be %v", i+1)
         return
       }
     } else {
-      if len(p.Pool) != 5 {
+      if p.Pool.Count() != 5 {
         t.Errorf("The max pool size is %v and now is %v", 5, i)
         return
       }
@@ -116,8 +116,8 @@ func TestPool_PoolIdle(t *testing.T) {
     p.Get()
   }
 
-  if len(p.Pool) != 5 {
-    t.Errorf("The pool length should be 5 not %v", len(p.Pool))
+  if p.Pool.Count() != 5 {
+    t.Errorf("The pool length should be 5 not %v", p.Pool.Count())
   }
 
   ticker := time.NewTicker(time.Second)
@@ -129,13 +129,14 @@ func TestPool_PoolIdle(t *testing.T) {
 
   time.Sleep(time.Second * 6)
 
-  if len(p.Pool) != 1 {
-    t.Errorf("The pool after all should be reduce to 1 not %v", len(p.Pool))
+  if p.Pool.Count() != 1 {
+    t.Errorf("The pool after all should be reduce to 1 not %v", p.Pool.Count())
     return
   }
 
-  for _, resource := range p.Pool {
-    if resource.Idle != true {
+  for _, resource := range p.Pool.Items() {
+    r := resource.(*Resource)
+    if r.Idle != true {
       t.Errorf("The idle pool should mark with idel")
       return
     }
@@ -258,8 +259,8 @@ func TestPool_PoolIdleWhenDestroyerThrow(t *testing.T) {
 
   time.Sleep(time.Second * 6)
 
-  if len(p.Pool) != 5 {
-    t.Errorf("The pool length should be 1 not %v", len(p.Pool))
+  if p.Pool.Count() != 5 {
+    t.Errorf("The pool length should be 1 not %v", p.Pool.Count())
     return
   }
 }
@@ -289,8 +290,8 @@ func TestPool_PoolDestroyLikeExpect(t *testing.T) {
     return
   }
 
-  if len(p.Pool) != 0 {
-    t.Errorf("The pool length should be 0 not %v", len(p.Pool))
+  if p.Pool.Count() != 0 {
+    t.Errorf("The pool length should be 0 not %v", p.Pool.Count())
     return
   }
 }
@@ -415,16 +416,37 @@ func TestPool_PoolReleaseResource(t *testing.T) {
 
   // release the resource one by one
 
-  for _, resource := range p.Pool {
-    if err := p.Release(resource.Id); err != nil {
+  for _, resource := range p.Pool.Items() {
+    r := resource.(*Resource)
+    if err := p.Release(r.Id); err != nil {
       t.Errorf("Release resource should success: %v", err)
       return
     }
   }
 
-  if len(p.Pool) != 0 {
-    t.Errorf("Now the pool should be empty, not length of %v", len(p.Pool))
+  if p.Pool.Count() != 0 {
+    t.Errorf("Now the pool should be empty, not length of %v", p.Pool.Count())
     return
+  }
+
+}
+
+func TestPool_PoolConcurrent(t *testing.T) {
+  // t.Skip()
+  p, _ := New(Config{
+    // create connection
+    Creator: func(p *Pool, id Id) (interface{}, error) {
+      return "This is a connection", nil
+    },
+    // destroy connection
+    Destroyer: func(p *Pool, connection interface{}) (error) {
+      return nil
+    },
+  }, Options{Min: 5, Max: 100, Idle: 60})
+
+  // fulled the pool
+  for i := 0; i < p.Options.Max+1; i++ {
+    p.Get()
   }
 
 }
