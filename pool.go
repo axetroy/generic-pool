@@ -37,12 +37,6 @@ type Options struct {
   Idle int64
 }
 
-type ByTime []*Resource
-
-func (a ByTime) Len() int           { return len(a) }
-func (a ByTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByTime) Less(i, j int) bool { return a[i].LastUseAt.UnixNano() > a[j].LastUseAt.UnixNano() }
-
 /**
 Create a new pool
  */
