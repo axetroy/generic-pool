@@ -6,6 +6,13 @@
 
 Manage the resource pool, like connection...
 
+## Features
+
+- [x] Thread safety at use
+- [x] Graceful to create/destroy the resource/connection
+- [x] Easy to Use
+- [x] 100% test cover
+
 ## Usage
 
 ```bash
